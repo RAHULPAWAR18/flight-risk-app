@@ -2,8 +2,7 @@ flask
 tensorflow
 pandas
 numpy
-scikit-learn
-joblib
+scikit-learn==1.6.1
 requests
 faker
 gunicorn

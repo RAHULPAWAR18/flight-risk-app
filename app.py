@@ -10,7 +10,9 @@ import random
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'your_super_secret_key_here' # Change this to a strong, random key
+app.secret_key = 'a8f3$kL9#mP2@vQ7!nX4&wR6*yT1^uJ5' # Change this to a strong, random key
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = True
 
 # --- Load the trained model and preprocessor ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

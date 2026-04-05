@@ -13,8 +13,9 @@ app = Flask(__name__)
 app.secret_key = 'your_super_secret_key_here' # Change this to a strong, random key
 
 # --- Load the trained model and preprocessor ---
-MODEL_PATH = 'flight_accident_cnn_model.h5'
-PREPROCESSOR_PATH = 'preprocessor.pkl'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, 'flight_accident_cnn_model.h5')
+PREPROCESSOR_PATH = os.path.join(BASE_DIR, 'preprocessor.pkl')
 
 model = None
 preprocessor = None
@@ -270,7 +271,7 @@ def realtime():
 @app.route('/chart')
 @login_required
 def chart():
-    df_path = 'flight_accidents_india_synthetic.csv'
+    df_path = os.path.join(BASE_DIR, 'flight_accidents_india_synthetic.csv')
     if os.path.exists(df_path):
         df = pd.read_csv(df_path)
     else:

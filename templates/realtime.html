@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Prediction - Flight Accident Prediction</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <!-- jsPDF and html2canvas CDN for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0c0b2f; /* Dark blue background */
+            color: #ffffff;
+            background-image: url("{{ url_for('static', filename='img/sky.png') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+            z-index: 1;
+        }
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(12, 11, 47, 0.85); /* Darker overlay */
+            z-index: -1;
+        }
+        .prediction-form-container {
+            background-color: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .form-group label {
+            color: #ffffff;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        .form-group input, .form-group select {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        .form-group input::placeholder {
+            color: #a0aec0;
+        }
+        .form-group input:focus, .form-group select:focus {
+            border-color: #00ffff;
+            box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.5);
+            background-color: rgba(255, 255, 255, 0.15);
+            outline: none;
+        }
+        .form-group select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="%23ffffff" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 0.7em top 50%;
+            background-size: 0.8em auto;
+            padding-right: 2.5em;
+        }
+        .form-group select option {
+            background-color: #0c0b2f;
+            color: #ffffff;
+        }
+        .predict-button {
+            background: linear-gradient(to right, #00ffff, #007bff); /* Cyan to Blue gradient */
+            transition: all 0.3s ease;
+            padding: 0.75rem 2rem;
+            border-radius: 0.75rem;
+            font-weight: 700;
+        }
+        .predict-button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        .logout-button {
+            background-color: #ef4444;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+        }
+        .logout-button:hover {
+            background-color: #dc2626;
+            transform: translateY(-2px);
+        }
+        .section-heading {
+            color: #00ffff;
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(0, 255, 255, 0.3);
+        }
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); display: flex; justify-content: center;
+            align-items: center; z-index: 1000; opacity: 0; visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal.show { opacity: 1; visibility: visible; }
+        .modal-content {
+            background-color: #0c0b2f; padding: 2rem; border-radius: 1rem;
+            text-align: center; width: 90%; max-width: 500px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3); position: relative;
+            transform: translateY(-20px); transition: transform 0.3s ease;
+        }
+        .modal.show .modal-content { transform: translateY(0); }
+        .modal-close-button {
+            position: absolute; top: 1rem; right: 1rem; background: none;
+            border: none; font-size: 1.5rem; color: #ffffff; cursor: pointer;
+        }
+        .modal-image { width: 150px; height: auto; margin: 0 auto 1rem auto; }
+        .modal-title {
+            font-size: 2rem; font-weight: 800; margin-bottom: 1rem;
+            background: linear-gradient(to right, #ff00ff, #00ffff);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .modal-message { font-size: 1.25rem; margin-bottom: 1.5rem; }
+        .modal-probability { font-size: 1.1rem; color: #a0aec0; margin-bottom: 1rem; }
+        .modal-reasons {
+            text-align: left; font-size: 1rem; color: #ffffff;
+            margin-top: 1rem; padding-left: 1.5rem;
+        }
+        .modal-reasons li { margin-bottom: 0.5rem; }
+        .download-button {
+            background: linear-gradient(to right, #00bfff, #007bff);
+            transition: all 0.3s ease; padding: 0.75rem 2rem;
+            border-radius: 0.75rem; font-weight: 700; margin-top: 1.5rem;
+        }
+        .download-button:hover { opacity: 0.9; transform: translateY(-2px); }
+
+        #pdfContent {
+            background-color: #0c0b2f; color: #ffffff; padding: 20px;
+            font-family: 'Inter', sans-serif; display: none; width: 800px;
+            box-sizing: border-box;
+        }
+        #pdfContent h1, #pdfContent h2, #pdfContent h3, #pdfContent p { color: #ffffff; }
+        #pdfContent .pdf-title { text-align: center; font-size: 28px; font-weight: bold; margin-bottom: 20px; color: #00ffff; }
+        #pdfContent .pdf-section-title { font-size: 20px; font-weight: bold; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding-bottom: 5px; }
+        #pdfContent .pdf-image { display: block; margin: 10px auto; width: 100px; height: auto; }
+        #pdfContent .pdf-chart-container { width: 100%; height: 300px; margin-top: 20px; background-color: rgba(255, 255, 255, 0.05); padding: 10px; border-radius: 8px; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="bg-transparent p-4 md:p-6 flex justify-between items-center z-20 relative">
+        <div class="text-2xl font-bold text-white">Flight Accident Prediction System</div>
+        <div class="hidden md:flex space-x-6 items-center">
+            <a href="{{ url_for('home') }}" class="text-white hover:text-gray-300">Home</a>
+            <a href="{{ url_for('about') }}" class="text-white hover:text-gray-300">About</a>
+            <a href="{{ url_for('predict') }}" class="text-white hover:text-gray-300">Advance Prediction</a>
+            <a href="{{ url_for('realtime') }}" class="text-cyan-400 font-bold hover:text-cyan-300">Real-time Prediction</a>
+            <a href="{{ url_for('dashboard') }}" class="text-white hover:text-gray-300">Dashboard</a>
+            <a href="{{ url_for('chart') }}" class="text-white hover:text-gray-300">Analysis</a>
+            <a href="{{ url_for('login') }}"
+               class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300">
+                Login
+            </a>
+        </div>
+        <div class="md:hidden">
+            <button class="text-white text-2xl focus:outline-none"><i class="fas fa-bars"></i></button>
+        </div>
+    </nav>
+
+    <div class="flex-grow flex flex-col items-center justify-center p-4">
+        <div class="prediction-form-container p-8 rounded-lg shadow-xl max-w-2xl w-full">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-white">Real-time Risk Prediction</h2>
+                <a href="{{ url_for('logout') }}"
+                   class="logout-button text-white font-semibold py-2 px-4 rounded-lg shadow-md">
+                    Logout
+                </a>
+            </div>
+            <p class="text-gray-300 mb-6 text-center">
+                Select your route and date. We'll fetch live weather data to predict the accident risk.
+                Other parameters will be set to standard operational values.
+            </p>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="mb-4">
+                        {% for category, message in messages %}
+                            <div class="p-3 rounded-md text-sm {% if category == 'danger' %}bg-red-700 text-white{% elif category == 'success' %}bg-green-700 text-white{% elif category == 'warning' %}bg-yellow-700 text-white{% else %}bg-blue-700 text-white{% endif %}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('realtime') }}" class="space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="form-group">
+                        <label for="dep_airport_place">Departure Place:</label>
+                        <select id="dep_airport_place" name="dep_airport_place" required>
+                            <option value="" disabled selected>Select Departure</option>
+                            {% for place in airport_places %}
+                                <option value="{{ place }}">{{ place }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="arr_airport_place">Arrival Place:</label>
+                        <select id="arr_airport_place" name="arr_airport_place" required>
+                            <option value="" disabled selected>Select Arrival</option>
+                            {% for place in airport_places %}
+                                <option value="{{ place }}">{{ place }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="flight_date">Flight Date:</label>
+                    <input type="date" id="flight_date" name="flight_date" required>
+                </div>
+
+                <div class="flex justify-center mt-4">
+                    <button type="submit"
+                            class="predict-button text-white font-bold py-3 px-8 rounded-lg shadow-md">
+                        <i class="fas fa-satellite-dish mr-2"></i> Predict with Live Data
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Prediction Result Modal -->
+    <div id="predictionModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close-button" onclick="closeModal()">&times;</button>
+            <img id="modalImage" src="" alt="Risk Indicator" class="modal-image">
+            <h3 id="modalTitle" class="modal-title"></h3>
+            <p id="modalMessage" class="modal-message"></p>
+            <p id="modalProbability" class="modal-probability"></p>
+            <div id="modalReasonsContainer" class="modal-reasons" style="display: none;">
+                <h4 class="font-bold mb-2">Factors contributing to the risk:</h4>
+                <ul id="modalReasonsList"></ul>
+            </div>
+            <button id="downloadPdfButton" class="download-button text-white">Download Report (PDF)</button>
+        </div>
+    </div>
+
+    <!-- Hidden content for PDF generation -->
+    <div id="pdfContent" class="p-8">
+        <h1 class="pdf-title">Flight Accident Prediction Report</h1>
+        <div class="pdf-section-title">Prediction Summary</div>
+        <img id="pdfImage" src="" alt="Risk Indicator" class="pdf-image">
+        <h2 id="pdfTitle" class="text-xl font-bold text-center mt-2"></h2>
+        <p id="pdfMessage" class="text-md text-center mt-1"></p>
+        <p id="pdfProbability" class="text-sm text-center mt-1"></p>
+
+        <div class="pdf-section-title">Fetched Real-time Data</div>
+        <div id="pdfFetchedData" class="text-sm" style="padding-left: 10px; margin-bottom: 20px;">
+            <!-- Data will be populated by JS -->
+        </div>
+
+        <div class="pdf-section-title">Contributing Factors</div>
+        <div class="pdf-chart-container">
+            <canvas id="pdfFactorsChart"></canvas>
+        </div>
+        <p class="text-xs text-center mt-4">
+            *Red bars indicate factors increasing accident risk. Green bars indicate factors mitigating risk.
+            <br>
+            Report generated on: <span id="reportDate"></span>
+        </p>
+    </div>
+
+    <script>
+        // Set date input constraints
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateInput = document.getElementById('flight_date');
+            const today = new Date();
+            const maxDate = new Date();
+            maxDate.setDate(today.getDate() + 15); // Allow forecast for next 15 days
+
+            dateInput.min = today.toISOString().split('T')[0];
+            dateInput.max = maxDate.toISOString().split('T')[0];
+            dateInput.value = today.toISOString().split('T')[0]; // Default to today
+        });
+
+        const predictionModal = document.getElementById('predictionModal');
+        const modalImage = document.getElementById('modalImage');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalProbability = document.getElementById('modalProbability');
+        const modalReasonsContainer = document.getElementById('modalReasonsContainer');
+        const modalReasonsList = document.getElementById('modalReasonsList');
+        const downloadPdfButton = document.getElementById('downloadPdfButton');
+
+        const pdfContent = document.getElementById('pdfContent');
+        const pdfImage = document.getElementById('pdfImage');
+        const pdfTitle = document.getElementById('pdfTitle');
+        const pdfMessage = document.getElementById('pdfMessage');
+        const pdfProbability = document.getElementById('pdfProbability');
+        const pdfFactorsChartCanvas = document.getElementById('pdfFactorsChart');
+        let factorsChartInstance = null;
+
+        function showModal(isHighRisk, probability, reasons, fetchedData) {
+            if (isHighRisk) {
+                modalImage.src = "{{ url_for('static', filename='img/high.png') }}";
+                modalTitle.textContent = "High Risk of Accident!";
+                modalMessage.textContent = "Immediate attention required. Based on real-time weather and standard flight parameters.";
+                modalMessage.style.color = "#ef4444";
+                modalReasonsContainer.style.display = 'block';
+                modalReasonsList.innerHTML = '';
+                if (reasons && reasons.length > 0) {
+                    reasons.forEach(reason => {
+                        const li = document.createElement('li');
+                        li.textContent = reason.factor;
+                        modalReasonsList.appendChild(li);
+                    });
+                }
+            } else {
+                modalImage.src = "{{ url_for('static', filename='img/low.png') }}";
+                modalTitle.textContent = "Low Risk of Accident";
+                modalMessage.textContent = "Flight conditions appear safe based on real-time weather and standard parameters.";
+                modalMessage.style.color = "#22c55e";
+                modalReasonsContainer.style.display = 'none';
+                modalReasonsList.innerHTML = '';
+            }
+            modalProbability.textContent = `Probability: ${probability.toFixed(2)}`;
+            predictionModal.classList.add('show');
+
+            pdfContent.style.display = 'block';
+            pdfImage.src = modalImage.src;
+            pdfTitle.textContent = modalTitle.textContent;
+            pdfMessage.textContent = modalMessage.textContent;
+            pdfProbability.textContent = modalProbability.textContent;
+            document.getElementById('reportDate').textContent = new Date().toLocaleDateString();
+
+            const pdfFetchedDataContainer = document.getElementById('pdfFetchedData');
+            pdfFetchedDataContainer.innerHTML = ''; // Clear previous data
+            if (fetchedData) {
+                const dataList = document.createElement('ul');
+                dataList.style.listStyle = 'none';
+                dataList.style.padding = '0';
+                dataList.style.columnCount = '2';
+                dataList.style.columnGap = '20px';
+
+                for (const [key, value] of Object.entries(fetchedData)) {
+                    const listItem = document.createElement('li');
+                    listItem.innerHTML = `<strong>${key}:</strong> ${value}`;
+                    listItem.style.marginBottom = '6px';
+                    listItem.style.breakInside = 'avoid-column';
+                    dataList.appendChild(listItem);
+                }
+                pdfFetchedDataContainer.appendChild(dataList);
+            }
+
+
+            const chartLabels = reasons.map(r => r.factor);
+            const chartValues = reasons.map(r => r.value);
+            const backgroundColors = reasons.map(r => r.impact === 'negative' ? 'rgba(239, 68, 68, 0.8)' : 'rgba(34, 197, 94, 0.8)');
+            const borderColors = reasons.map(r => r.impact === 'negative' ? 'rgba(239, 68, 68, 1)' : 'rgba(34, 197, 94, 1)');
+
+            if (factorsChartInstance) {
+                factorsChartInstance.destroy();
+            }
+
+            factorsChartInstance = new Chart(pdfFactorsChartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Factor Impact',
+                        data: chartValues,
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Contributing Factors', color: '#ffffff', font: { size: 16 } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#a0aec0' }, grid: { color: 'rgba(255, 255, 255, 0.1)' }, title: { display: true, text: 'Impact Score', color: '#00ffff' } },
+                        y: { ticks: { color: '#a0aec0' }, grid: { color: 'rgba(255, 255, 255, 0.1)' }, title: { display: true, text: 'Factor', color: '#00ffff' } }
+                    }
+                }
+            });
+            factorsChartInstance.update();
+        }
+
+        function closeModal() {
+            predictionModal.classList.remove('show');
+            if (factorsChartInstance) {
+                factorsChartInstance.destroy();
+                factorsChartInstance = null;
+            }
+            pdfContent.style.display = 'none';
+        }
+
+        downloadPdfButton.addEventListener('click', async () => {
+            pdfContent.style.display = 'block';
+            if (factorsChartInstance) {
+                factorsChartInstance.update();
+            }
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const canvas = await html2canvas(pdfContent, { scale: 2, useCORS: true, backgroundColor: '#0c0b2f' });
+            const imgData = canvas.toDataURL('image/png');
+            const imgWidth = 210;
+            const pageHeight = 297;
+            const imgHeight = canvas.height * imgWidth / canvas.width;
+            let heightLeft = imgHeight;
+            let position = 0;
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+            while (heightLeft >= 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+            pdf.save('Realtime_Flight_Accident_Report.pdf');
+            pdfContent.style.display = 'none';
+        });
+
+        {% if prediction_result %}
+            document.addEventListener('DOMContentLoaded', (event) => {
+                const isHighRisk = {{ 'true' if prediction_result.color == 'text-red-600' else 'false' }};
+                const probabilityMatch = "{{ prediction_result.text }}".match(/Probability: (\d+\.\d+)/);
+                const probability = probabilityMatch ? parseFloat(probabilityMatch[1]) : 0.0;
+                const reasons = {{ prediction_result.reasons | tojson }};
+                const fetchedData = {{ prediction_result.fetched_data | tojson }};
+                showModal(isHighRisk, probability, reasons, fetchedData);
+            });
+        {% endif %}
+
+        window.onclick = function(event) {
+            if (event.target == predictionModal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>

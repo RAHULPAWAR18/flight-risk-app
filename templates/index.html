@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Accident Prediction System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0c0b2f; /* Dark blue background */
+            color: #ffffff;
+        }
+        .hero-section {
+            background-color: #0c0b2f; /* Dark blue background */
+            background-image: url("{{ url_for('static', filename='img/ai-006.jpg') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+            z-index: 1;
+        }
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to right, rgba(12, 11, 47, 0.9) 30%, rgba(12, 11, 47, 0.5) 70%, rgba(12, 11, 47, 0) 100%);
+            z-index: -1;
+        }
+        .ai-service-card {
+            background-color: rgba(255, 255, 255, 0.05); /* Slightly transparent white for cards */
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .gradient-text {
+            background: linear-gradient(to right, #ff00ff, #00ffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .icon-box {
+            color: #ff00ff; /* Pink for icons */
+        }
+        .learn-more-btn {
+            background: linear-gradient(to right, #ff00ff, #da00ff);
+            transition: all 0.3s ease;
+        }
+        .learn-more-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        .prediction-capabilities-section {
+            background-image: url("{{ url_for('static', filename='img/flight.png') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+        }
+        .prediction-capabilities-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(12, 11, 47, 0.8); /* Dark overlay for readability */
+            z-index: 0;
+        }
+        .prediction-capabilities-section > div {
+            position: relative;
+            z-index: 1; /* Ensure content is above the overlay */
+        }
+        .preventive-measures-section {
+            background-image: url("{{ url_for('static', filename='img/sky.png') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+        }
+        .preventive-measures-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(12, 11, 47, 0.8); /* Dark overlay for readability */
+            z-index: 0;
+        }
+        .preventive-measures-section > div {
+            position: relative;
+            z-index: 1; /* Ensure content is above the overlay */
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+<!-- Navbar -->
+    <nav class="bg-transparent p-4 md:p-6 flex justify-between items-center z-20 relative">
+        <div class="text-2xl font-bold text-white">Flight Accident Prediction System</div>
+        <div class="hidden md:flex space-x-6 items-center">
+            <a href="{{ url_for('home') }}" class="text-cyan-400 font-bold hover:text-cyan-300">Home</a>
+            <a href="{{ url_for('about') }}" class="text-white hover:text-gray-300">About</a>
+            <a href="{{ url_for('predict') }}" class="text-white hover:text-gray-300">Advance Prediction</a>
+            <a href="{{ url_for('realtime') }}" class="text-white hover:text-gray-300">Real-time Prediction</a>
+            <a href="{{ url_for('dashboard') }}" class="text-white hover:text-gray-300">Dashboard</a>
+            <a href="{{ url_for('chart') }}" class="text-white hover:text-gray-300">Analysis</a>
+            <a href="{{ url_for('login') }}"
+               class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300">
+                Login
+            </a>
+        </div>
+        <div class="md:hidden">
+            <button class="text-white text-2xl focus:outline-none"><i class="fas fa-bars"></i></button>
+        </div>
+    </nav>
+
+
+    <!-- Hero Section -->
+    <header class="hero-section flex items-center justify-start py-20 md:py-32 lg:py-48 px-4 md:px-8 relative z-0">
+        <div class="container mx-auto text-left relative z-10 max-w-2xl">
+            <h1 class="text-5xl md:text-7xl lg:text-8xl font-extrabold leading-tight mb-6">
+                Predicting Flight Safety for a Safer Tomorrow
+            </h1>
+            <p class="text-lg md:text-xl font-semibold mb-4 gradient-text uppercase tracking-wider">
+                Machine Learning for Aviation Safety
+            </p>
+            <p class="text-base md:text-lg text-gray-300 mb-8">
+                Our advanced system leverages machine learning to analyze various flight parameters, weather conditions, and aircraft data to predict potential accident risks. This proactive approach aims to enhance aviation safety and prevent incidents before they occur.
+            </p>
+            <p class="text-base md:text-lg text-gray-300">
+                By identifying patterns and anomalies, we provide crucial insights that contribute to more secure air travel.
+            </p>
+        </div>
+    </header>
+
+    <!-- Our Prediction Capabilities Section -->
+    <section class="py-16 md:py-24 px-4 md:px-8 prediction-capabilities-section">
+        <div class="container mx-auto text-center mb-12">
+            <p class="text-sm font-semibold uppercase text-gray-400 mb-2">Capabilities</p>
+            <h2 class="text-4xl md:text-5xl font-extrabold text-white">Our Prediction Capabilities</h2>
+        </div>
+        <div class="container mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <!-- Service Card 1: Data Preprocessing -->
+            <div class="ai-service-card p-6 rounded-lg shadow-lg flex flex-col items-center text-center">
+                <div class="icon-box text-5xl mb-4">
+                    <i class="fas fa-database"></i> <!-- Icon for data -->
+                </div>
+                <h3 class="text-xl font-semibold text-white mb-3">DATA PREPROCESSING</h3>
+                <p class="text-gray-300 text-sm">
+                    We meticulously clean, transform, and prepare raw flight data, ensuring optimal quality for robust machine learning model training.
+                </p>
+            </div>
+            <!-- Service Card 2: Machine Learning Models -->
+            <div class="ai-service-card p-6 rounded-lg shadow-lg flex flex-col items-center text-center">
+                <div class="icon-box text-5xl mb-4">
+                    <i class="fas fa-brain"></i> <!-- Icon for ML -->
+                </div>
+                <h3 class="text-xl font-semibold text-white mb-3">MACHINE LEARNING MODELS</h3>
+                <p class="text-gray-300 text-sm">
+                    Utilizing advanced algorithms like CNNs, we build predictive models to identify complex patterns indicative of accident risks.
+                </p>
+            </div>
+            <!-- Service Card 3: Real-time Monitoring -->
+            <div class="ai-service-card p-6 rounded-lg shadow-lg flex flex-col items-center text-center">
+                <div class="icon-box text-5xl mb-4">
+                    <i class="fas fa-cloud"></i> <!-- Icon for cloud/monitoring -->
+                </div>
+                <h3 class="text-xl font-semibold text-white mb-3">REAL-TIME MONITORING</h3>
+                <p class="text-gray-300 text-sm">
+                    Our system can be integrated for continuous analysis of live flight data, providing immediate risk assessments.
+                </p>
+            </div>
+            <!-- Service Card 4: Safety Insights -->
+            <div class="ai-service-card p-6 rounded-lg shadow-lg flex flex-col items-center text-center">
+                <div class="icon-box text-5xl mb-4">
+                    <i class="fas fa-chart-pie"></i> <!-- Icon for insights/analysis -->
+                </div>
+                <h3 class="text-xl font-semibold text-white mb-3">SAFETY INSIGHTS</h3>
+                <p class="text-gray-300 text-sm">
+                    Generate actionable reports and insights to inform safety protocols and operational improvements for airlines.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Preventive Measures and Incident Analysis Section -->
+    <section class="py-16 md:py-24 px-4 md:px-8 preventive-measures-section">
+        <div class="container mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Preventive Measures Card -->
+            <div class="bg-white p-8 rounded-lg shadow-xl text-gray-800">
+                <h3 class="text-3xl font-bold mb-4">Preventive Measures</h3>
+                <p class="text-gray-600 mb-6">
+                    Our predictions empower aviation authorities and airlines to implement proactive safety measures, significantly reducing the likelihood of accidents.
+                </p>
+                <ul class="mb-6 space-y-2">
+                    <li class="flex items-center text-green-600">
+                        <i class="fas fa-check-circle mr-2"></i> Early risk identification
+                    </li>
+                    <li class="flex items-center text-green-600">
+                        <i class="fas fa-check-circle mr-2"></i> Enhanced operational planning
+                    </li>
+                    <li class="flex items-center text-green-600">
+                        <i class="fas fa-check-circle mr-2"></i> Targeted maintenance scheduling
+                    </li>
+                </ul>
+                <button class="learn-more-btn text-white font-semibold py-3 px-6 rounded-lg shadow-md">
+                    VIEW DETAILS
+                </button>
+            </div>
+
+            <!-- Incident Analysis Card -->
+            <div class="bg-white p-8 rounded-lg shadow-xl text-gray-800">
+                <h3 class="text-3xl font-bold mb-4">Incident Analysis</h3>
+                <p class="text-gray-600 mb-6">
+                    Beyond prediction, our system aids in comprehensive post-incident analysis, helping to uncover root causes and prevent future occurrences.
+                </p>
+                <ul class="mb-6 space-y-2">
+                    <li class="flex items-center text-green-600">
+                        <i class="fas fa-check-circle mr-2"></i> Root cause identification
+                    </li>
+                    <li class="flex items-center text-green-600">
+                        <i class="fas fa-check-circle mr-2"></i> Trend analysis of incidents
+                    </li>
+                    <li class="flex items-center text-green-600">
+                        <i class="fas fa-check-circle mr-2"></i> Data-driven safety recommendations
+                    </li>
+                </ul>
+                <button class="learn-more-btn text-white font-semibold py-3 px-6 rounded-lg shadow-md">
+                    VIEW DETAILS
+                </button>
+            </div>
+        </div>
+    </section>
+
+</body>
+</html>

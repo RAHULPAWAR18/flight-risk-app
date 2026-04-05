@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - Flight Accident Prediction System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0c0b2f; /* Dark blue background matching home page */
+            color: #ffffff; /* White text for contrast */
+            background-image: url("{{ url_for('static', filename='img/sky.jpg') }}"); /* Background image */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+            z-index: 1;
+            min-height: 100vh; /* Ensure body takes full height */
+        }
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(12, 11, 47, 0.8); /* Dark overlay for readability */
+            z-index: -1;
+        }
+        .content-section {
+            background-color: rgba(255, 255, 255, 0.05); /* Slightly transparent white for content cards */
+            backdrop-filter: blur(5px); /* Frosted glass effect */
+            border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+            border-radius: 1rem; /* Rounded corners */
+            padding: 2rem;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2); /* Cyan shadow */
+        }
+        .section-heading {
+            color: #00ffff; /* Cyan color for section headings */
+            font-size: 2.5rem; /* text-4xl */
+            font-weight: 700; /* font-bold */
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(0, 255, 255, 0.3); /* Underline effect */
+            text-align: center;
+        }
+        .sub-heading {
+            color: #ffffff;
+            font-size: 1.75rem; /* text-2xl */
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        .feature-item i {
+            color: #00ffff;
+            margin-right: 0.75rem;
+            font-size: 1.25rem;
+        }
+    </style>
+</head>
+<body class="flex flex-col">
+
+<!-- Navbar -->
+    <nav class="bg-transparent p-4 md:p-6 flex justify-between items-center z-20 relative">
+        <div class="text-2xl font-bold text-white">Flight Accident Prediction System</div>
+        <div class="hidden md:flex space-x-6 items-center">
+            <a href="{{ url_for('home') }}" class="text-white hover:text-gray-300">Home</a>
+            <a href="{{ url_for('about') }}" class="text-cyan-400 font-bold hover:text-cyan-300">About</a>
+            <a href="{{ url_for('predict') }}" class="text-white hover:text-gray-300">Prediction</a>
+            <a href="{{ url_for('realtime') }}" class="text-white hover:text-gray-300">Real-time Prediction</a>
+            <a href="{{ url_for('dashboard') }}" class="text-white hover:text-gray-300">Dashboard</a>
+            <a href="{{ url_for('chart') }}" class="text-white hover:text-gray-300">Analysis</a>
+            <a href="{{ url_for('login') }}"
+               class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300">
+                Login
+            </a>
+        </div>
+        <div class="md:hidden">
+            <button class="text-white text-2xl focus:outline-none"><i class="fas fa-bars"></i></button>
+        </div>
+    </nav>
+
+
+    <div class="flex-grow p-4 md:p-8">
+        <div class="container mx-auto mt-8">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-white text-center mb-12">About Our Project</h1>
+
+            <section class="mb-12 content-section">
+                <h2 class="section-heading">The Importance of Flight Safety</h2>
+                <div class="flex flex-col md:flex-row items-center justify-center gap-8">
+                    <div class="md:w-1/2">
+                        <p class="text-lg leading-relaxed mb-4">
+                            Air travel is one of the safest modes of transportation, but every accident, no matter how rare, has devastating consequences. Our project aims to contribute to the continuous improvement of aviation safety by leveraging advanced machine learning techniques.
+                        </p>
+                        <p class="text-lg leading-relaxed mb-4">
+                            By proactively identifying potential risks, we empower airlines, regulators, and pilots with actionable insights, moving from reactive incident analysis to proactive accident prevention.
+                        </p>
+                    </div>
+                    <div class="md:w-1/2 flex justify-center">
+                        <img src="{{ url_for('static', filename='img/ai-006.jpg') }}" alt="Flight Safety" class="rounded-lg shadow-lg max-w-full h-auto" style="max-height: 300px; object-fit: cover;">
+                    </div>
+                </div>
+            </section>
+
+            <section class="mb-12 content-section">
+                <h2 class="section-heading">Problem Statement</h2>
+                <div class="flex flex-col md:flex-row-reverse items-center justify-center gap-8">
+                    <div class="md:w-1/2">
+                        <p class="text-lg leading-relaxed mb-4">
+                            Despite stringent safety measures, unforeseen circumstances and complex interactions of factors can lead to aviation incidents. Traditional safety analysis often relies on post-incident investigations.
+                        </p>
+                        <p class="text-lg leading-relaxed mb-4">
+                            The challenge lies in predicting these rare events before they occur, based on a multitude of operational, environmental, and mechanical variables.
+                        </p>
+                    </div>
+                    <div class="md:w-1/2 flex justify-center">
+                        <img src="{{ url_for('static', filename='img/high.png') }}" alt="High Risk Indicator" class="rounded-lg shadow-lg max-w-full h-auto" style="max-height: 250px; object-fit: contain;">
+                    </div>
+                </div>
+            </section>
+
+            <section class="mb-12 content-section">
+                <h2 class="section-heading">Our Solution: Predictive Analytics</h2>
+                <div class="flex flex-col md:flex-row items-center justify-center gap-8">
+                    <div class="md:w-1/2">
+                        <p class="text-lg leading-relaxed mb-4">
+                            Our system utilizes a Convolutional Neural Network (CNN) model, trained on a comprehensive dataset of flight parameters and historical accident data. This allows us to analyze complex patterns and identify subtle indicators of risk.
+                        </p>
+                        <p class="text-lg leading-relaxed mb-4">
+                            Key features of our solution include:
+                        </p>
+                        <ul class="text-lg space-y-2">
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> Data-driven risk assessment</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> Identification of contributing factors</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> Intuitive dashboard for insights</li>
+                            <li class="feature-item"><i class="fas fa-check-circle"></i> User-friendly prediction interface</li>
+                        </ul>
+                    </div>
+                    <div class="md:w-1/2 flex justify-center">
+                        <img src="{{ url_for('static', filename='img/sky.png') }}" alt="Predictive Analytics" class="rounded-lg shadow-lg max-w-full h-auto" style="max-height: 300px; object-fit: cover;">
+                    </div>
+                </div>
+            </section>
+
+            <section class="mb-12 content-section">
+                <h2 class="section-heading">Impact and Future Vision</h2>
+                <div class="flex flex-col md:flex-row-reverse items-center justify-center gap-8">
+                    <div class="md:w-1/2">
+                        <p class="text-lg leading-relaxed mb-4">
+                            By providing early warnings and insights into risk factors, our project aims to significantly reduce the likelihood of aviation accidents, enhance operational safety, and save lives.
+                        </p>
+                        <p class="text-lg leading-relaxed mb-4">
+                            Future enhancements include real-time data feeds, advanced interpretability features (e.g., SHAP/LIME), and integration with flight planning systems for dynamic risk mitigation.
+                        </p>
+                    </div>
+                    <div class="md:w-1/2 flex justify-center">
+                        <img src="{{ url_for('static', filename='img/low.png') }}" alt="Low Risk Indicator" class="rounded-lg shadow-lg max-w-full h-auto" style="max-height: 250px; object-fit: contain;">
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+</body>
+</html>

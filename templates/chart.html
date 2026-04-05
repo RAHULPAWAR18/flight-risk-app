@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accident Analytics Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0c0b2f; /* Dark blue background matching home page */
+            color: #ffffff; /* White text for contrast */
+            background-image: url("{{ url_for('static', filename='img/sky.jpg') }}"); /* Background image */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+            z-index: 1;
+            min-height: 100vh; /* Ensure body takes full height */
+        }
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(12, 11, 47, 0.8); /* Dark overlay for readability */
+            z-index: -1;
+        }
+        .chart-container-wrapper {
+            background-color: rgba(255, 255, 255, 0.05); /* Slightly transparent white for chart cards */
+            backdrop-filter: blur(5px); /* Frosted glass effect */
+            border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+            border-radius: 1rem; /* Rounded corners */
+            padding: 1.5rem;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2); /* Cyan shadow */
+            height: 400px; /* Fixed height for chart containers */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .chart-container-wrapper canvas {
+            max-height: 100%; /* Ensure canvas respects parent's height */
+            width: 100%; /* Ensure canvas takes full width */
+        }
+        .section-heading {
+            color: #00ffff; /* Cyan color for section headings */
+            font-size: 2rem; /* text-3xl */
+            font-weight: 700; /* font-bold */
+            margin-bottom: 2rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(0, 255, 255, 0.3); /* Underline effect */
+            text-align: center;
+        }
+        .chart-title {
+            color: #ffffff;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="flex flex-col">
+
+<!-- Navbar -->
+    <nav class="bg-transparent p-4 md:p-6 flex justify-between items-center z-20 relative">
+        <div class="text-2xl font-bold text-white">Flight Accident Prediction System</div>
+        <div class="hidden md:flex space-x-6 items-center">
+            <a href="{{ url_for('home') }}" class="text-white hover:text-gray-300">Home</a>
+            <a href="{{ url_for('about') }}" class="text-white hover:text-gray-300">About</a>
+            <a href="{{ url_for('predict') }}" class="text-white hover:text-gray-300">Advance Prediction</a>
+            <a href="{{ url_for('realtime') }}" class="text-white hover:text-gray-300">Real-time Prediction</a>
+            <a href="{{ url_for('dashboard') }}" class="text-white hover:text-gray-300">Dashboard</a>
+            <a href="{{ url_for('chart') }}" class="text-cyan-400 font-bold hover:text-cyan-300">Analysis</a>
+            <a href="{{ url_for('login') }}"
+               class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300">
+                Login
+            </a>
+        </div>
+        <div class="md:hidden">
+            <button class="text-white text-2xl focus:outline-none"><i class="fas fa-bars"></i></button>
+        </div>
+    </nav>
+
+
+    <div class="flex-grow p-4 md:p-8">
+        <div class="container mx-auto mt-8">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-white text-center mb-12">Accident Analytics Dashboard</h1>
+
+            <!-- Flight Details Section -->
+            <section class="mb-12">
+                <h2 class="section-heading">Flight Details & Aircraft</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="chart-container-wrapper">
+                        <h3 class="chart-title">Accidents by Flight Phase</h3>
+                        <canvas id="flightPhaseChart"></canvas>
+                    </div>
+                    <div class="chart-container-wrapper">
+                        <h3 class="chart-title">Accidents by Aircraft Type</h3>
+                        <canvas id="aircraftTypeChart"></canvas>
+                    </div>
+                    <div class="chart-container-wrapper lg:col-span-2">
+                        <h3 class="chart-title">Accidents by Aircraft Age (Years)</h3>
+                        <canvas id="aircraftAgeChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Pilot & Crew Data Section -->
+            <section class="mb-12">
+                <h2 class="section-heading">Pilot & Crew Data</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="chart-container-wrapper">
+                        <h3 class="chart-title">Accidents by Pilot Experience (Hours)</h3>
+                        <canvas id="pilotExperienceChart"></canvas>
+                    </div>
+                    <div class="chart-container-wrapper">
+                        <h3 class="chart-title">Accidents by Co-Pilot Experience (Hours)</h3>
+                        <canvas id="copilotExperienceChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Weather & Environment Data Section -->
+            <section class="mb-12">
+                <h2 class="section-heading">Weather & Environment</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="chart-container-wrapper">
+                        <h3 class="chart-title">Accidents by Weather Condition</h3>
+                        <canvas id="weatherConditionChart"></canvas>
+                    </div>
+                    <div class="chart-container-wrapper">
+                        <h3 class="chart-title">Accidents by Visibility (KM)</h3>
+                        <canvas id="visibilityChart"></canvas>
+                    </div>
+                    <div class="chart-container-wrapper">
+                        <h3 class="chart-title">Accidents by Season</h3>
+                        <canvas id="seasonChart"></canvas>
+                    </div>
+                    <div class="chart-container-wrapper">
+                        <h3 class="chart-title">Accidents by Turbulence Severity</h3>
+                        <canvas id="turbulenceSeverityChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Runway & Traffic Data Section -->
+            <section class="mb-12">
+                <h2 class="section-heading">Runway & Traffic Data</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="chart-container-wrapper">
+                        <h3 class="chart-title">Accidents by Departure Airport Elevation</h3>
+                        <canvas id="depAirportElevationChart"></canvas>
+                    </div>
+                    <div class="chart-container-wrapper">
+                        <h3 class="chart-title">Accidents by Air Traffic Density</h3>
+                        <canvas id="airTrafficDensityChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <script>
+        // Helper function for generating gradient colors
+        function getGradient(ctx, chartArea, colorStart, colorEnd) {
+            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+            gradient.addColorStop(0, colorStart);
+            gradient.addColorStop(1, colorEnd);
+            return gradient;
+        }
+
+        // Dummy Data for Charts (replace with real data from your model/database)
+        const flightPhaseData = {
+            labels: ['Takeoff', 'En_Route', 'Landing', 'Taxi', 'Parked'],
+            datasets: [{
+                label: 'Number of Accidents',
+                data: [15, 5, 20, 2, 1],
+                backgroundColor: [], // Will be filled with gradients
+                borderColor: 'rgba(0, 255, 255, 0.5)',
+                borderWidth: 1,
+                borderRadius: 5,
+            }]
+        };
+
+        const aircraftTypeData = {
+            labels: ['Boeing 737', 'Airbus A320', 'ATR 72', 'Boeing 787', 'Dornier Do 228'],
+            datasets: [{
+                label: 'Number of Accidents',
+                data: [10, 8, 12, 3, 2],
+                backgroundColor: [],
+                borderColor: 'rgba(255, 0, 255, 0.5)',
+                borderWidth: 1,
+                borderRadius: 5,
+            }]
+        };
+
+        const aircraftAgeData = {
+            labels: ['0-5', '6-10', '11-15', '16-20', '21-25+'],
+            datasets: [{
+                label: 'Number of Accidents',
+                data: [5, 10, 18, 15, 7],
+                backgroundColor: [],
+                borderColor: 'rgba(0, 255, 255, 0.5)',
+                borderWidth: 1,
+                fill: true,
+            }]
+        };
+
+        const pilotExperienceData = {
+            labels: ['<1000 hrs', '1000-5000 hrs', '5000-10000 hrs', '10000-20000 hrs', '>20000 hrs'],
+            datasets: [{
+                label: 'Number of Accidents',
+                data: [10, 15, 12, 8, 3],
+                backgroundColor: [],
+                borderColor: 'rgba(255, 0, 255, 0.5)',
+                borderWidth: 1,
+                borderRadius: 5,
+            }]
+        };
+
+        const copilotExperienceData = {
+            labels: ['<500 hrs', '500-2000 hrs', '2000-5000 hrs', '>5000 hrs'],
+            datasets: [{
+                label: 'Number of Accidents',
+                data: [8, 10, 7, 5],
+                backgroundColor: [],
+                borderColor: 'rgba(0, 255, 255, 0.5)',
+                borderWidth: 1,
+                borderRadius: 5,
+            }]
+        };
+
+        const weatherConditionData = {
+            labels: ['Clear', 'Cloudy', 'Rain', 'Fog', 'Thunderstorms', 'Dust_Storm'],
+            datasets: [{
+                label: 'Number of Accidents',
+                data: [5, 10, 15, 8, 12, 7],
+                backgroundColor: [],
+                borderColor: 'rgba(255, 0, 255, 0.5)',
+                borderWidth: 1,
+            }]
+        };
+
+        const visibilityData = {
+            labels: ['<1 KM', '1-5 KM', '5-10 KM', '>10 KM'],
+            datasets: [{
+                label: 'Number of Accidents',
+                data: [18, 10, 5, 2],
+                backgroundColor: [],
+                borderColor: 'rgba(0, 255, 255, 0.5)',
+                borderWidth: 1,
+                fill: true,
+            }]
+        };
+
+        const seasonData = {
+            labels: ['Monsoon', 'Winter', 'Summer', 'Post-Monsoon'],
+            datasets: [{
+                label: 'Number of Accidents',
+                data: [20, 8, 15, 7],
+                backgroundColor: [],
+                borderColor: 'rgba(255, 0, 255, 0.5)',
+                borderWidth: 1,
+            }]
+        };
+
+        const turbulenceSeverityData = {
+            labels: ['None', 'Light', 'Moderate', 'Severe'],
+            datasets: [{
+                label: 'Number of Accidents',
+                data: [3, 7, 15, 20],
+                backgroundColor: [],
+                borderColor: 'rgba(0, 255, 255, 0.5)',
+                borderWidth: 1,
+            }]
+        };
+
+        const depAirportElevationData = {
+            labels: ['<500 ft', '500-2000 ft', '2000-5000 ft', '>5000 ft'],
+            datasets: [{
+                label: 'Number of Accidents',
+                data: [10, 15, 8, 5],
+                backgroundColor: [],
+                borderColor: 'rgba(255, 0, 255, 0.5)',
+                borderWidth: 1,
+            }]
+        };
+
+        const airTrafficDensityData = {
+            labels: ['Low', 'Medium', 'High'],
+            datasets: [{
+                label: 'Number of Accidents',
+                data: [5, 10, 25],
+                backgroundColor: [],
+                borderColor: 'rgba(0, 255, 255, 0.5)',
+                borderWidth: 1,
+            }]
+        };
+
+
+        // Chart Options (consistent theme)
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#ffffff', // White legend text
+                        font: {
+                            size: 14
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(12, 11, 47, 0.9)', // Dark tooltip background
+                    titleColor: '#00ffff', // Cyan tooltip title
+                    bodyColor: '#ffffff', // White tooltip body
+                    borderColor: '#00ffff',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: '#a0aec0', // Grayish white tick labels
+                        font: {
+                            size: 12
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)', // Subtle grid lines
+                        drawBorder: false,
+                    }
+                },
+                y: {
+                    ticks: {
+                        color: '#a0aec0',
+                        font: {
+                            size: 12
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)',
+                        drawBorder: false,
+                    }
+                }
+            }
+        };
+
+        // Function to create a chart
+        function createChart(chartId, type, data, options) {
+            const ctx = document.getElementById(chartId).getContext('2d');
+            const chart = new Chart(ctx, {
+                type: type,
+                data: data,
+                options: options
+            });
+
+            // Apply gradients after chart is initialized and rendered
+            chart.options.onResize = function(chart, size) {
+                applyGradients(chart);
+            };
+            applyGradients(chart); // Apply initially
+        }
+
+        function applyGradients(chart) {
+            const chartArea = chart.chartArea;
+            if (!chartArea) return;
+
+            const datasets = chart.data.datasets;
+            datasets.forEach(dataset => {
+                if (dataset.backgroundColor.length === 0 || dataset.backgroundColor[0] instanceof CanvasGradient) {
+                    // Apply gradient only if not already applied or if it's a new chart
+                    if (chart.canvas.id === 'flightPhaseChart' || chart.canvas.id === 'pilotExperienceChart' || chart.canvas.id === 'copilotExperienceChart' || chart.canvas.id === 'depAirportElevationChart' || chart.canvas.id === 'airTrafficDensityChart') {
+                        dataset.backgroundColor = dataset.data.map(() => getGradient(chart.ctx, chartArea, 'rgba(255, 0, 255, 0.8)', 'rgba(0, 255, 255, 0.8)')); // Pink to Cyan
+                    } else if (chart.canvas.id === 'aircraftTypeChart' || chart.canvas.id === 'weatherConditionChart' || chart.canvas.id === 'seasonChart' || chart.canvas.id === 'turbulenceSeverityChart') {
+                        dataset.backgroundColor = dataset.data.map(() => getGradient(chart.ctx, chartArea, 'rgba(0, 255, 255, 0.8)', 'rgba(255, 0, 255, 0.8)')); // Cyan to Pink
+                    } else if (chart.canvas.id === 'aircraftAgeChart' || chart.canvas.id === 'visibilityChart') {
+                        dataset.backgroundColor = getGradient(chart.ctx, chartArea, 'rgba(0, 255, 255, 0.4)', 'rgba(255, 0, 255, 0.4)'); // Area gradient
+                        dataset.borderColor = getGradient(chart.ctx, chartArea, 'rgba(0, 255, 255, 1)', 'rgba(255, 0, 255, 1)'); // Line gradient
+                    }
+                }
+            });
+            chart.update();
+        }
+
+
+        // Initialize charts on DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', () => {
+            createChart('flightPhaseChart', 'bar', flightPhaseData, commonOptions);
+            createChart('aircraftTypeChart', 'bar', aircraftTypeData, commonOptions);
+            createChart('aircraftAgeChart', 'line', aircraftAgeData, {
+                ...commonOptions,
+                scales: {
+                    x: { ...commonOptions.scales.x, type: 'category' }, // Ensure x-axis is categorical for labels
+                    y: commonOptions.scales.y
+                }
+            });
+            createChart('pilotExperienceChart', 'bar', pilotExperienceData, commonOptions);
+            createChart('copilotExperienceChart', 'bar', copilotExperienceData, commonOptions);
+            createChart('weatherConditionChart', 'polarArea', weatherConditionData, {
+                ...commonOptions,
+                scales: {
+                    r: { // Radial scale for polarArea
+                        ticks: {
+                            color: '#a0aec0',
+                            backdropColor: 'transparent' // Transparent background for ticks
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        pointLabels: {
+                            color: '#ffffff' // Labels around the polar chart
+                        }
+                    }
+                }
+            });
+            createChart('visibilityChart', 'line', visibilityData, {
+                ...commonOptions,
+                scales: {
+                    x: { ...commonOptions.scales.x, type: 'category' },
+                    y: commonOptions.scales.y
+                }
+            });
+            createChart('seasonChart', 'pie', seasonData, {
+                ...commonOptions,
+                scales: {} // Pie charts don't use x/y scales
+            });
+            createChart('turbulenceSeverityChart', 'bar', turbulenceSeverityData, commonOptions);
+            createChart('depAirportElevationChart', 'bar', depAirportElevationData, commonOptions);
+            createChart('airTrafficDensityChart', 'doughnut', airTrafficDensityData, {
+                ...commonOptions,
+                scales: {} // Doughnut charts don't use x/y scales
+            });
+        });
+    </script>
+</body>
+</html>

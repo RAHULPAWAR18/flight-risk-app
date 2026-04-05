@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predict Accident - Flight Accident Prediction</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <!-- jsPDF and html2canvas CDN for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0c0b2f; /* Dark blue background matching home page */
+            color: #ffffff; /* White text for contrast */
+            background-image: url("{{ url_for('static', filename='img/sky.png') }}"); /* Background image */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+            z-index: 1;
+        }
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(12, 11, 47, 0.8); /* Dark overlay for readability */
+            z-index: -1;
+        }
+        .prediction-form-container {
+            background-color: rgba(255, 255, 255, 0.05); /* Slightly transparent white for the form card */
+            backdrop-filter: blur(5px); /* Frosted glass effect */
+            border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+        }
+        .form-group label {
+            color: #ffffff; /* White text for labels */
+            display: block; /* Ensure label takes full width */
+            margin-bottom: 0.5rem; /* Space between label and input */
+        }
+        .form-group input, .form-group select {
+            background-color: rgba(255, 255, 255, 0.1); /* Slightly transparent input background */
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff; /* White text in input fields */
+            padding: 0.75rem 1rem; /* Increased padding */
+            border-radius: 0.5rem; /* Rounded corners */
+            transition: all 0.3s ease; /* Smooth transitions */
+            width: 100%; /* Ensure inputs take full width of their grid column */
+        }
+        .form-group input::placeholder {
+            color: #a0aec0; /* Lighter placeholder text */
+        }
+        .form-group input:focus, .form-group select:focus {
+            border-color: #00ffff; /* Cyan focus border */
+            box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.5);
+            background-color: rgba(255, 255, 255, 0.15); /* Slightly more opaque on focus */
+            outline: none; /* Remove default outline */
+        }
+        /* Specific styles for select options to ensure text visibility */
+        .form-group select {
+            -webkit-appearance: none; /* Remove default arrow on WebKit browsers */
+            -moz-appearance: none; /* Remove default arrow on Firefox */
+            appearance: none; /* Remove default arrow */
+            background-image: url('data:image/svg+xml;utf8,<svg fill="%23ffffff" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); /* Custom white arrow */
+            background-repeat: no-repeat;
+            background-position: right 0.7em top 50%;
+            background-size: 0.8em auto;
+            padding-right: 2.5em; /* Make space for the custom arrow */
+        }
+        .form-group select option {
+            background-color: #0c0b2f; /* Dark background for options */
+            color: #ffffff; /* White text for options */
+        }
+
+        .predict-button {
+            background: linear-gradient(to right, #ff00ff, #da00ff); /* Pink gradient button */
+            transition: all 0.3s ease;
+            padding: 0.75rem 2rem; /* Adjusted padding */
+            border-radius: 0.75rem; /* More rounded */
+            font-weight: 700; /* Bolder text */
+        }
+        .predict-button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        .logout-button {
+            background-color: #ef4444; /* Red color */
+            transition: all 0.3s ease;
+            padding: 0.5rem 1.5rem; /* Adjusted padding */
+            border-radius: 0.75rem; /* More rounded */
+            font-weight: 600; /* Bolder text */
+        }
+        .logout-button:hover {
+            background-color: #dc2626; /* Darker red on hover */
+            transform: translateY(-2px);
+        }
+        .prediction-result-box {
+            background-color: rgba(255, 255, 255, 0.05); /* Slightly transparent white for result box */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem; /* More rounded */
+        }
+        .section-heading {
+            color: #00ffff; /* Cyan color for section headings */
+            font-size: 1.75rem; /* text-2xl */
+            font-weight: 700; /* font-bold */
+            margin-bottom: 1.5rem; /* mb-6 */
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(0, 255, 255, 0.3); /* Underline effect */
+        }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: #0c0b2f; /* Dark background for modal */
+            padding: 2rem;
+            border-radius: 1rem;
+            text-align: center;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3); /* Cyan shadow */
+            position: relative;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+        .modal.show .modal-content {
+            transform: translateY(0);
+        }
+        .modal-close-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #ffffff;
+            cursor: pointer;
+        }
+        .modal-image {
+            width: 150px;
+            height: auto;
+            margin: 0 auto 1rem auto;
+        }
+        .modal-title {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #ff00ff, #00ffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .modal-message {
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .modal-probability {
+            font-size: 1.1rem;
+            color: #a0aec0;
+            margin-bottom: 1rem; /* Added margin */
+        }
+        .modal-reasons { /* Added style for reasons */
+            text-align: left;
+            font-size: 1rem;
+            color: #ffffff;
+            margin-top: 1rem;
+            padding-left: 1.5rem;
+        }
+        .modal-reasons li {
+            margin-bottom: 0.5rem;
+        }
+        .download-button {
+            background: linear-gradient(to right, #00bfff, #007bff); /* Blue gradient */
+            transition: all 0.3s ease;
+            padding: 0.75rem 2rem;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            margin-top: 1.5rem;
+        }
+        .download-button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        /* Styles for the hidden PDF content */
+        #pdfContent {
+            background-color: #0c0b2f;
+            color: #ffffff;
+            padding: 20px;
+            font-family: 'Inter', sans-serif;
+            display: none; /* Hidden by default */
+            width: 800px; /* Fixed width for PDF generation */
+            box-sizing: border-box;
+        }
+        #pdfContent h1, #pdfContent h2, #pdfContent h3, #pdfContent p {
+            color: #ffffff; /* Ensure text is white in PDF */
+        }
+        #pdfContent .pdf-title {
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #00ffff; /* Cyan color for PDF title */
+        }
+        #pdfContent .pdf-section-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 5px;
+        }
+        #pdfContent .pdf-image {
+            display: block;
+            margin: 10px auto;
+            width: 100px; /* Smaller image in PDF */
+            height: auto;
+        }
+        #pdfContent .pdf-chart-container {
+            width: 100%;
+            height: 300px; /* Fixed height for chart in PDF */
+            margin-top: 20px;
+            background-color: rgba(255, 255, 255, 0.05); /* Chart background */
+            padding: 10px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+<!-- Navbar -->
+    <nav class="bg-transparent p-4 md:p-6 flex justify-between items-center z-20 relative">
+        <div class="text-2xl font-bold text-white">Flight Accident Prediction System</div>
+        <div class="hidden md:flex space-x-6 items-center">
+            <a href="{{ url_for('home') }}" class="text-white hover:text-gray-300">Home</a>
+            <a href="{{ url_for('about') }}" class="text-white hover:text-gray-300">About</a>
+            <a href="{{ url_for('predict') }}" class="text-cyan-400 font-bold hover:text-cyan-300">Advance Prediction</a>
+            <a href="{{ url_for('realtime') }}" class="text-white hover:text-gray-300">Real-time Prediction</a>
+            <a href="{{ url_for('dashboard') }}" class="text-white hover:text-gray-300">Dashboard</a>
+            <a href="{{ url_for('chart') }}" class="text-white hover:text-gray-300">Analysis</a>
+            <a href="{{ url_for('login') }}"
+               class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300">
+                Login
+            </a>
+        </div>
+        <div class="md:hidden">
+            <button class="text-white text-2xl focus:outline-none"><i class="fas fa-bars"></i></button>
+        </div>
+    </nav>
+
+
+    <div class="flex-grow flex flex-col items-center justify-center p-4">
+        <div class="prediction-form-container p-8 rounded-lg shadow-xl max-w-4xl w-full">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-white">Flight Accident Prediction</h2>
+                <a href="{{ url_for('logout') }}"
+                   class="logout-button text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                    Logout
+                </a>
+            </div>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="mb-4">
+                        {% for category, message in messages %}
+                            <div class="p-3 rounded-md text-sm {% if category == 'danger' %}bg-red-700 text-white{% elif category == 'success' %}bg-green-700 text-white{% elif category == 'warning' %}bg-yellow-700 text-white{% else %}bg-blue-700 text-white{% endif %}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('predict') }}" class="space-y-8">
+                <!-- Flight Data Section -->
+                <div class="form-section">
+                    <h3 class="section-heading">Flight Details</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="form-group">
+                            <label for="flight_duration_hours">Flight Duration (Hours):</label>
+                            <input type="number" step="0.1" id="flight_duration_hours" name="flight_duration_hours" required min="0.1" max="15" value="2.5">
+                        </div>
+                        <div class="form-group">
+                            <label for="flight_phase">Flight Phase:</label>
+                            <select id="flight_phase" name="flight_phase" required>
+                                {% for phase in flight_phases %}
+                                    <option value="{{ phase }}">{{ phase }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="dep_airport_code">Departure Airport Code:</label>
+                            <select id="dep_airport_code" name="dep_airport_code" required>
+                                {% for code in airport_codes %}
+                                    <option value="{{ code }}">{{ code }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="dep_airport_elevation_ft">Departure Airport Elevation (FT):</label>
+                            <input type="number" id="dep_airport_elevation_ft" name="dep_airport_elevation_ft" required min="0" max="15000" value="777">
+                        </div>
+                        <div class="form-group">
+                            <label for="arr_airport_code">Arrival Airport Code:</label>
+                            <select id="arr_airport_code" name="arr_airport_code" required>
+                                {% for code in airport_codes %}
+                                    <option value="{{ code }}">{{ code }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="arr_airport_elevation_ft">Arrival Airport Elevation (FT):</label>
+                            <input type="number" id="arr_airport_elevation_ft" name="arr_airport_elevation_ft" required min="0" max="15000" value="39">
+                        </div>
+                        <div class="form-group">
+                            <label for="total_onboard">Total Onboard:</label>
+                            <input type="number" id="total_onboard" name="total_onboard" required min="10" max="500" value="180">
+                        </div>
+                        <div class="form-group">
+                            <label for="cargo_weight_kg">Cargo Weight (KG):</label>
+                            <input type="number" id="cargo_weight_kg" name="cargo_weight_kg" required min="0" max="20000" value="1500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aircraft & Maintenance Data Section -->
+                <div class="form-section">
+                    <h3 class="section-heading">Aircraft & Maintenance</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="form-group">
+                            <label for="airline">Airline:</label>
+                            <select id="airline" name="airline" required>
+                                {% for airline in airlines %}
+                                    <option value="{{ airline }}">{{ airline }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="aircraft_type">Aircraft Type:</label>
+                            <select id="aircraft_type" name="aircraft_type" required>
+                                {% for type in aircraft_types %}
+                                    <option value="{{ type }}">{{ type }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="aircraft_age_years">Aircraft Age (Years):</label>
+                            <input type="number" id="aircraft_age_years" name="aircraft_age_years" required min="1" max="50" value="10">
+                        </div>
+                        <div class="form-group">
+                            <label for="last_maintenance_hours">Last Maintenance (Hours):</label>
+                            <input type="number" id="last_maintenance_hours" name="last_maintenance_hours" required min="0" max="5000" value="500">
+                        </div>
+                        <div class="form-group">
+                            <label for="engine_hours_since_overhaul">Engine Hours Since Overhaul:</label>
+                            <input type="number" id="engine_hours_since_overhaul" name="engine_hours_since_overhaul" required min="0" max="10000" value="2000">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pilot & Crew Data Section -->
+                <div class="form-section">
+                    <h3 class="section-heading">Pilot & Crew Details</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="form-group">
+                            <label for="pilot_experience_hours">Pilot Experience (Hours):</label>
+                            <input type="number" id="pilot_experience_hours" name="pilot_experience_hours" required min="100" max="30000" value="8000">
+                        </div>
+                        <div class="form-group">
+                            <label for="copilot_experience_hours">Co-Pilot Experience (Hours):</label>
+                            <input type="number" id="copilot_experience_hours" name="copilot_experience_hours" required min="50" max="20000" value="3500">
+                        </div>
+                        <div class="form-group">
+                            <label for="number_of_crew">Number of Crew:</label>
+                            <input type="number" id="number_of_crew" name="number_of_crew" required min="2" max="20" value="6">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Weather & Environment Data Section -->
+                <div class="form-section">
+                    <h3 class="section-heading">Weather & Environment</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="form-group">
+                            <label for="season">Season:</label>
+                            <select id="season" name="season" required>
+                                {% for season in seasons %}
+                                    <option value="{{ season }}">{{ season }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="weather_condition">Weather Condition:</label>
+                            <select id="weather_condition" name="weather_condition" required>
+                                {% for condition in weather_conditions %}
+                                    <option value="{{ condition }}">{{ condition }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="visibility_km">Visibility (KM):</label>
+                            <input type="number" step="0.1" id="visibility_km" name="visibility_km" required min="0.1" max="20" value="10.0">
+                        </div>
+                        <div class="form-group">
+                            <label for="wind_speed_knots">Wind Speed (Knots):</label>
+                            <input type="number" id="wind_speed_knots" name="wind_speed_knots" required min="0" max="100" value="5">
+                        </div>
+                        <div class="form-group">
+                            <label for="wind_direction_degrees">Wind Direction (Degrees):</label>
+                            <input type="number" id="wind_direction_degrees" name="wind_direction_degrees" required min="0" max="359" value="270">
+                        </div>
+                        <div class="form-group">
+                            <label for="temperature_celsius">Temperature (Celsius):</label>
+                            <input type="number" step="0.1" id="temperature_celsius" name="temperature_celsius" required min="-10" max="50" value="25.0">
+                        </div>
+                        <div class="form-group">
+                            <label for="precipitation_mm">Precipitation (MM):</label>
+                            <input type="number" step="0.1" id="precipitation_mm" name="precipitation_mm" required min="0" max="50" value="0.0">
+                        </div>
+                        <div class="form-group">
+                            <label for="turbulence_severity">Turbulence Severity:</label>
+                            <select id="turbulence_severity" name="turbulence_severity" required>
+                                {% for severity in turbulence_severities %}
+                                    <option value="{{ severity }}">{{ severity }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Route & Traffic Data Section -->
+                <div class="form-section">
+                    <h3 class="section-heading">Route & Traffic</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="form-group">
+                            <label for="route_complexity">Route Complexity:</label>
+                            <select id="route_complexity" name="route_complexity" required>
+                                {% for complexity in route_complexities %}
+                                    <option value="{{ complexity }}">{{ complexity }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="air_traffic_density">Air Traffic Density:</label>
+                            <select id="air_traffic_density" name="air_traffic_density" required>
+                                {% for density in air_traffic_densities %}
+                                    <option value="{{ density }}">{{ density }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="lg:col-span-3 flex justify-center mt-4">
+                    <button type="submit"
+                            class="predict-button text-white font-bold py-3 px-8 rounded-lg shadow-md">
+                        Predict Accident
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Prediction Result Modal -->
+    <div id="predictionModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close-button" onclick="closeModal()">&times;</button>
+            <img id="modalImage" src="" alt="Risk Indicator" class="modal-image">
+            <h3 id="modalTitle" class="modal-title"></h3>
+            <p id="modalMessage" class="modal-message"></p>
+            <p id="modalProbability" class="modal-probability"></p>
+            <div id="modalReasonsContainer" class="modal-reasons" style="display: none;">
+                <h4 class="font-bold mb-2">Factors contributing to the risk:</h4>
+                <ul id="modalReasonsList">
+                    <!-- Reasons will be inserted here by JavaScript -->
+                </ul>
+            </div>
+            <button id="downloadPdfButton" class="download-button text-white">Download Report (PDF)</button>
+        </div>
+    </div>
+
+    <!-- Hidden content for PDF generation -->
+    <div id="pdfContent" class="p-8">
+        <h1 class="pdf-title">Flight Accident Prediction Report</h1>
+
+        <div class="pdf-section-title">Prediction Summary</div>
+        <img id="pdfImage" src="" alt="Risk Indicator" class="pdf-image">
+        <h2 id="pdfTitle" class="text-xl font-bold text-center mt-2"></h2>
+        <p id="pdfMessage" class="text-md text-center mt-1"></p>
+        <p id="pdfProbability" class="text-sm text-center mt-1"></p>
+
+        <div class="pdf-section-title">Input Parameters</div>
+        <div id="pdfInputData" class="text-sm" style="padding-left: 10px; margin-bottom: 20px;">
+            <!-- Data will be populated by JS -->
+        </div>
+
+        <div class="pdf-section-title">Contributing Factors</div>
+        <div class="pdf-chart-container">
+            <canvas id="pdfFactorsChart"></canvas>
+        </div>
+        <p class="text-xs text-center mt-4">
+            *Red bars indicate factors increasing accident risk. Green bars indicate factors mitigating risk.
+            <br>
+            Report generated on: <span id="reportDate"></span>
+        </p>
+    </div>
+
+
+    <script>
+        // JavaScript to handle the modal display
+        const predictionModal = document.getElementById('predictionModal');
+        const modalImage = document.getElementById('modalImage');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalProbability = document.getElementById('modalProbability');
+        const modalReasonsContainer = document.getElementById('modalReasonsContainer');
+        const modalReasonsList = document.getElementById('modalReasonsList');
+        const downloadPdfButton = document.getElementById('downloadPdfButton');
+
+        // Elements for PDF content
+        const pdfContent = document.getElementById('pdfContent');
+        const pdfImage = document.getElementById('pdfImage');
+        const pdfTitle = document.getElementById('pdfTitle');
+        const pdfMessage = document.getElementById('pdfMessage');
+        const pdfProbability = document.getElementById('pdfProbability');
+        const pdfFactorsChartCanvas = document.getElementById('pdfFactorsChart');
+        let factorsChartInstance = null; // To hold the Chart.js instance for PDF
+
+        function showModal(isHighRisk, probability, reasons, inputData) {
+            // Update modal content
+            if (isHighRisk) {
+                modalImage.src = "{{ url_for('static', filename='img/high.png') }}";
+                modalTitle.textContent = "High Risk of Accident!";
+                modalMessage.textContent = "Immediate attention required. Consider reviewing flight parameters.";
+                modalMessage.style.color = "#ef4444"; // Red color for high risk message
+                modalReasonsContainer.style.display = 'block'; // Show reasons container
+                modalReasonsList.innerHTML = ''; // Clear previous reasons
+                if (reasons && reasons.length > 0) {
+                    reasons.forEach(reason => {
+                        const li = document.createElement('li');
+                        li.textContent = reason.factor; // Access 'factor' property
+                        modalReasonsList.appendChild(li);
+                    });
+                } else {
+                    const li = document.createElement('li');
+                    li.textContent = "No specific contributing factors identified.";
+                    modalReasonsList.appendChild(li);
+                }
+
+            } else {
+                modalImage.src = "{{ url_for('static', filename='img/low.png') }}";
+                modalTitle.textContent = "Low Risk of Accident";
+                modalMessage.textContent = "Flight conditions appear safe. Continue monitoring.";
+                modalMessage.style.color = "#22c55e"; // Green color for low risk message
+                modalReasonsContainer.style.display = 'none'; // Hide reasons for low risk
+                modalReasonsList.innerHTML = ''; // Clear reasons
+            }
+            modalProbability.textContent = `Probability: ${probability.toFixed(2)}`;
+            predictionModal.classList.add('show');
+
+            // --- Populate and render PDF content ---
+            // Temporarily make pdfContent visible so Chart.js can render correctly
+            pdfContent.style.display = 'block';
+
+            pdfImage.src = modalImage.src;
+            pdfTitle.textContent = modalTitle.textContent;
+            pdfMessage.textContent = modalMessage.textContent;
+            pdfProbability.textContent = modalProbability.textContent;
+            document.getElementById('reportDate').textContent = new Date().toLocaleDateString();
+
+            // Populate Input Data for PDF
+            const pdfInputDataContainer = document.getElementById('pdfInputData');
+            pdfInputDataContainer.innerHTML = ''; // Clear previous data
+            if (inputData) {
+                const dataList = document.createElement('ul');
+                dataList.style.listStyle = 'none';
+                dataList.style.padding = '0';
+                dataList.style.columnCount = '3';
+                dataList.style.columnGap = '20px';
+
+                for (const [key, value] of Object.entries(inputData)) {
+                    const formattedKey = key.replace(/_/g, ' ');
+                    const listItem = document.createElement('li');
+                    listItem.innerHTML = `<strong style="text-transform: capitalize;">${formattedKey}:</strong> ${value}`;
+                    listItem.style.marginBottom = '6px';
+                    listItem.style.breakInside = 'avoid-column';
+                    dataList.appendChild(listItem);
+                }
+                pdfInputDataContainer.appendChild(dataList);
+            }
+
+
+            // Prepare data for the PDF chart
+            const chartLabels = reasons.map(r => r.factor);
+            const chartValues = reasons.map(r => r.value); // Use 'value' for bar length
+            const backgroundColors = reasons.map(r => r.impact === 'negative' ? 'rgba(239, 68, 68, 0.8)' : 'rgba(34, 197, 94, 0.8)'); // Red for negative, Green for positive
+            const borderColors = reasons.map(r => r.impact === 'negative' ? 'rgba(239, 68, 68, 1)' : 'rgba(34, 197, 94, 1)');
+
+            if (factorsChartInstance) {
+                factorsChartInstance.destroy(); // Destroy existing chart instance
+            }
+
+            factorsChartInstance = new Chart(pdfFactorsChartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Factor Impact',
+                        data: chartValues,
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Horizontal bars
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false // No legend needed for single dataset
+                        },
+                        title: {
+                            display: true,
+                            text: 'Contributing Factors',
+                            color: '#ffffff',
+                            font: { size: 16 }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#a0aec0' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            title: {
+                                display: true,
+                                text: 'Impact Score',
+                                color: '#00ffff'
+                            }
+                        },
+                        y: {
+                            ticks: { color: '#a0aec0' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            title: {
+                                display: true,
+                                text: 'Factor',
+                                color: '#00ffff'
+                            }
+                        }
+                    }
+                }
+            });
+            factorsChartInstance.update(); // Force chart update after creation
+
+            // Do NOT hide pdfContent here. It will be hidden after PDF generation.
+        }
+
+        function closeModal() {
+            predictionModal.classList.remove('show');
+            if (factorsChartInstance) {
+                factorsChartInstance.destroy(); // Destroy chart when modal closes
+                factorsChartInstance = null;
+            }
+            // Ensure pdfContent is hidden when modal closes, if it was made visible
+            pdfContent.style.display = 'none';
+        }
+
+        // PDF Download Logic
+        downloadPdfButton.addEventListener('click', async () => {
+            // Ensure pdfContent is visible and chart is rendered before capture
+            pdfContent.style.display = 'block';
+            if (factorsChartInstance) {
+                factorsChartInstance.update(); // Ensure chart is fully rendered
+            }
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4'); // Portrait, millimeters, A4 size
+
+            // Capture the content of the hidden div
+            const canvas = await html2canvas(pdfContent, {
+                scale: 2, // Increase scale for better resolution
+                useCORS: true, // Important for images loaded from Flask static
+                backgroundColor: '#0c0b2f' // Ensure background is captured
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const imgWidth = 210; // A4 width in mm
+            const pageHeight = 297; // A4 height in mm
+            const imgHeight = canvas.height * imgWidth / canvas.width;
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+
+            while (heightLeft >= 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+
+            pdf.save('Flight_Accident_Report.pdf');
+
+            // Hide the PDF content again after download
+            pdfContent.style.display = 'none';
+        });
+
+
+        // This block will be executed if Flask passes prediction_result
+        {% if prediction_result %}
+            document.addEventListener('DOMContentLoaded', (event) => {
+                const isHighRisk = {{ 'true' if prediction_result.color == 'text-red-600' else 'false' }};
+                const probabilityMatch = "{{ prediction_result.text }}".match(/Probability: (\d+\.\d+)/);
+                const probability = probabilityMatch ? parseFloat(probabilityMatch[1]) : 0.0; // Extract probability reliably
+                const reasons = {{ prediction_result.reasons | tojson }};
+                const inputData = {{ prediction_result.form_data | tojson }};
+                showModal(isHighRisk, probability, reasons, inputData);
+            });
+        {% endif %}
+
+        // Optional: Close modal when clicking outside of it
+        window.onclick = function(event) {
+            if (event.target == predictionModal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>

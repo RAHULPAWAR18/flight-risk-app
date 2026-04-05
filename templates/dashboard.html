@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accident Prediction Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0c0b2f; /* Dark blue background matching home page */
+            color: #ffffff; /* White text for contrast */
+            background-image: url("{{ url_for('static', filename='img/sky.jpg') }}"); /* Background image */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+            z-index: 1;
+            min-height: 100vh; /* Ensure body takes full height */
+        }
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(12, 11, 47, 0.8); /* Dark overlay for readability */
+            z-index: -1;
+        }
+        .chart-container-wrapper {
+            background-color: rgba(255, 255, 255, 0.05); /* Slightly transparent white for chart cards */
+            backdrop-filter: blur(5px); /* Frosted glass effect */
+            border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+            border-radius: 1rem; /* Rounded corners */
+            padding: 1.5rem;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2); /* Cyan shadow */
+            height: 500px; /* Fixed height for chart container */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .chart-container-wrapper canvas {
+            max-height: 100%; /* Ensure canvas respects parent's height */
+            width: 100%; /* Ensure canvas takes full width */
+        }
+        .section-heading {
+            color: #00ffff; /* Cyan color for section headings */
+            font-size: 2rem; /* text-3xl */
+            font-weight: 700; /* font-bold */
+            margin-bottom: 2rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(0, 255, 255, 0.3); /* Underline effect */
+            text-align: center;
+        }
+        .chart-title {
+            color: #ffffff;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="flex flex-col">
+
+<!-- Navbar -->
+    <nav class="bg-transparent p-4 md:p-6 flex justify-between items-center z-20 relative">
+        <div class="text-2xl font-bold text-white">Flight Accident Prediction System</div>
+        <div class="hidden md:flex space-x-6 items-center">
+            <a href="{{ url_for('home') }}" class="text-white hover:text-gray-300">Home</a>
+            <a href="{{ url_for('about') }}" class="text-white hover:text-gray-300">About</a>
+            <a href="{{ url_for('predict') }}" class="text-white hover:text-gray-300">Prediction</a>
+            <a href="{{ url_for('realtime') }}" class="text-white hover:text-gray-300">Real-time Prediction</a>
+            <a href="{{ url_for('dashboard') }}" class="text-cyan-400 font-bold hover:text-cyan-300">Dashboard</a>
+            <a href="{{ url_for('chart') }}" class="text-white hover:text-gray-300">Analysis</a>
+            <a href="{{ url_for('login') }}"
+               class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300">
+                Login
+            </a>
+        </div>
+        <div class="md:hidden">
+            <button class="text-white text-2xl focus:outline-none"><i class="fas fa-bars"></i></button>
+        </div>
+    </nav>
+
+
+
+    <div class="flex-grow p-4 md:p-8">
+        <div class="container mx-auto mt-8">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-white text-center mb-12">Model Feature Importance</h1>
+
+            <section class="mb-12">
+                <div class="grid grid-cols-1 gap-8">
+                    <div class="chart-container-wrapper">
+                        <h3 class="chart-title">Overall Feature Importance</h3>
+                        <canvas id="featureImportanceChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <script>
+        // Helper function for generating gradient colors
+        function getGradient(ctx, chartArea, colorStart, colorEnd) {
+            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+            gradient.addColorStop(0, colorStart);
+            gradient.addColorStop(1, colorEnd);
+            return gradient;
+        }
+
+        // Data passed from Flask backend
+        const featureLabels = {{ labels | tojson }};
+        const featureValues = {{ values | tojson }};
+
+        const featureImportanceData = {
+            labels: featureLabels,
+            datasets: [{
+                label: 'Importance Score',
+                data: featureValues,
+                backgroundColor: [], // Will be filled with gradients
+                borderColor: 'rgba(0, 255, 255, 0.5)',
+                borderWidth: 1,
+                borderRadius: 5,
+            }]
+        };
+
+        // Chart Options (consistent theme)
+        const commonOptions = {
+            indexAxis: 'y', // Make it a horizontal bar chart
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#ffffff', // White legend text
+                        font: {
+                            size: 14
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(12, 11, 47, 0.9)', // Dark tooltip background
+                    titleColor: '#00ffff', // Cyan tooltip title
+                    bodyColor: '#ffffff', // White tooltip body
+                    borderColor: '#00ffff',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: '#a0aec0', // Grayish white tick labels
+                        font: {
+                            size: 12
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)', // Subtle grid lines
+                        drawBorder: false,
+                    },
+                    title: {
+                        display: true,
+                        text: 'Importance Score',
+                        color: '#00ffff',
+                        font: {
+                            size: 14,
+                            weight: 'bold'
+                        }
+                    }
+                },
+                y: {
+                    ticks: {
+                        color: '#a0aec0',
+                        font: {
+                            size: 12
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)',
+                        drawBorder: false,
+                    },
+                    title: {
+                        display: true,
+                        text: 'Feature',
+                        color: '#00ffff',
+                        font: {
+                            size: 14,
+                            weight: 'bold'
+                        }
+                    }
+                }
+            }
+        };
+
+        // Function to create a chart
+        function createChart(chartId, type, data, options) {
+            const ctx = document.getElementById(chartId).getContext('2d');
+            const chart = new Chart(ctx, {
+                type: type,
+                data: data,
+                options: options
+            });
+
+            // Apply gradients after chart is initialized and rendered
+            chart.options.onResize = function(chart, size) {
+                applyGradients(chart);
+            };
+            applyGradients(chart); // Apply initially
+        }
+
+        function applyGradients(chart) {
+            const chartArea = chart.chartArea;
+            if (!chartArea) return;
+
+            const datasets = chart.data.datasets;
+            datasets.forEach(dataset => {
+                // Apply gradient for bar chart
+                dataset.backgroundColor = dataset.data.map(() => getGradient(chart.ctx, chartArea, 'rgba(255, 0, 255, 0.8)', 'rgba(0, 255, 255, 0.8)')); // Pink to Cyan
+            });
+            chart.update();
+        }
+
+
+        // Initialize charts on DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', () => {
+            createChart('featureImportanceChart', 'bar', featureImportanceData, commonOptions);
+        });
+    </script>
+</body>
+</html>

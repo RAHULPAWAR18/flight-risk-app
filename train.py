@@ -32,6 +32,22 @@ categorical_cols = X.select_dtypes(include='object').columns.tolist()
 print(f"\nNumerical columns identified: {numerical_cols}")
 print(f"Categorical columns identified: {categorical_cols}")
 
+# --- Updated Preprocessor ---
+from sklearn.preprocessing import OneHotEncoder  # make sure this import is visible
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', StandardScaler(), numerical_cols),
+        ('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_cols)
+    ]
+)
+
+X_processed = preprocessor.fit_transform(X)
+
+import joblib
+joblib.dump(preprocessor, "preprocessor.pkl")
+print("✅ Preprocessor updated and saved as 'preprocessor.pkl'")
+
 # --- 3. Create Preprocessing Pipeline ---
 # StandardScaler for numerical features
 numerical_transformer = StandardScaler()
